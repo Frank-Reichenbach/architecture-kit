@@ -45,7 +45,7 @@ Ask in plain language. For example:
 - "What would be affected if the Event Bus is down for an hour?"
 - "Draw the returns process as a scenario."
 
-Claude follows `CLAUDE.md` and the `architecture-diagrams` skill in `.claude/skills/`. It changes the model,
+Claude follows `AGENTS.md` and the `architecture-diagrams` skill in `.claude/skills/`. It changes the model,
 runs the checks, renders, looks at the images itself, and then points you to the files.
 
 ## Commands
