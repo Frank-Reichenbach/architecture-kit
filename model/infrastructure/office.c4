@@ -1,0 +1,112 @@
+// Office and warehouse: one building, one internet line, connected to production by a site-to-site VPN.
+
+deployment {
+
+  environment office 'Office & Warehouse' {
+    description 'Head office and the warehouse in the same building.'
+
+    site hq 'Headquarters Kassel' {
+      description 'Office floor plus warehouse hall, one fibre internet line.'
+
+      officeFw = firewall 'Office Firewall' {
+        #critical
+        description 'Internet breakout, routing between VLANs, site-to-site VPN to production.'
+        technology 'OPNsense'
+        metadata {
+          wan_ip '198.51.100.20'
+        }
+      }
+
+      officeSwitch = switch 'Access Switches' {
+        description 'Stacked access switches with PoE for access points.'
+        technology '1 GbE managed L2, PoE+'
+      }
+
+      wifi = accesspoint 'Wi-Fi Access Points' {
+        description 'One SSID per VLAN: staff, scanners, guests.'
+        technology 'Wi-Fi 6, 6 APs'
+        style {
+          multiple true
+        }
+      }
+
+      staffLan = network 'Staff LAN' {
+        description 'Office PCs and laptops of customer service and operations.'
+        metadata {
+          vlan '100'
+          cidr '10.20.100.0/24'
+          gateway '10.20.100.1'
+        }
+
+        staffPcs = device 'Staff Laptops' {
+          description 'Customer service uses the Backoffice in the browser; ops reach Grafana via VPN.'
+          technology 'Windows / macOS'
+          style {
+            multiple true
+          }
+        }
+      }
+
+      warehouseLan = network 'Warehouse LAN' {
+        #pii
+        description 'Warehouse server and handheld scanners. No internet access except carrier API.'
+        metadata {
+          vlan '110'
+          cidr '10.20.110.0/24'
+          gateway '10.20.110.1'
+        }
+
+        wmsHost = server 'WMS Server' {
+          description 'Runs the warehouse system and its database.'
+          technology 'Ubuntu, Docker'
+          metadata {
+            ip '10.20.110.10'
+          }
+
+          instanceOf warehouse.wms
+          instanceOf warehouse.wmsDb
+        }
+
+        scanners = device 'Handheld Scanners' {
+          description 'Zebra handhelds on the scanner SSID.'
+          technology 'Android'
+          style {
+            icon bootstrap:upc-scan
+            multiple true
+          }
+          metadata {
+            ip 'DHCP 10.20.110.100-199'
+          }
+
+          instanceOf warehouse.scannerApp
+        }
+      }
+
+      guestLan = network 'Guest Wi-Fi' {
+        description 'Internet only, isolated from all other VLANs.'
+        metadata {
+          vlan '200'
+          cidr '10.20.200.0/24'
+          gateway '10.20.200.1'
+        }
+
+        guests = device 'Guest Devices' {
+          description 'Visitors and private phones.'
+          technology 'any'
+          style {
+            icon bootstrap:phone
+            multiple true
+          }
+        }
+      }
+
+      // ── Physical / L2 links ──
+      officeFw -[netlink]-> officeSwitch '802.1Q trunk (VLAN 100, 110, 200)'
+      officeSwitch -[netlink]-> wifi 'PoE trunk'
+      officeSwitch -[netlink]-> wmsHost 'VLAN 110'
+      officeSwitch -[netlink]-> staffPcs 'VLAN 100 (wired)'
+      wifi -[netlink]-> scanners 'SSID "scan" → VLAN 110'
+      wifi -[netlink]-> guests 'SSID "guest" → VLAN 200'
+    }
+  }
+}

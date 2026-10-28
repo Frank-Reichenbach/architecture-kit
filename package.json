@@ -1,0 +1,17 @@
+{
+  "name": "architecture",
+  "private": true,
+  "description": "Architecture as code: LikeC4 models that Claude writes and you review as rendered images",
+  "type": "module",
+  "devDependencies": {
+    "likec4": "1.59.4"
+  },
+  "scripts": {
+    "setup": "npm ci && playwright install --only-shell chromium",
+    "check": "likec4 validate model && node scripts/check.mjs",
+    "render": "node scripts/render.mjs",
+    "serve": "likec4 start model",
+    "format": "likec4 format model",
+    "mcp": "likec4 mcp --stdio model"
+  }
+}

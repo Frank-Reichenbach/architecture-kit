@@ -1,0 +1,9 @@
+views {
+
+  view warehouseContainers of warehouse {
+    title 'Warehouse Management — Containers'
+    description 'On-premises warehouse system and its integration with the shop and the carrier.'
+    include *
+    autoLayout LeftRight
+  }
+}

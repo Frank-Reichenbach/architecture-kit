@@ -1,0 +1,39 @@
+// The public internet: customers and the external SaaS providers, plus the WAN / VPN links between our sites.
+
+deployment {
+
+  wan = internet 'Internet' {
+    description 'Public internet. Everything here is outside our control.'
+
+    customers = device 'Customer Devices' {
+      description 'Browsers and phones of our customers.'
+      technology 'any browser'
+      style {
+        multiple true
+      }
+    }
+
+    saas = site 'SaaS Providers' {
+      description 'External services we call over the internet.'
+
+      instanceOf paymentProvider
+      instanceOf carrier
+      instanceOf emailService
+    }
+  }
+
+  // ── WAN uplinks ──
+  wan -[netlink]-> prod.dc.edgeFw 'uplink, 2 × 1 Gbit/s'
+  wan -[netlink]-> office.hq.officeFw 'fibre, 500 Mbit/s'
+
+  // ── Site-to-site VPN ──
+  office.hq.officeFw -[vpn]-> prod.dc.edgeFw 'site-to-site VPN' {
+    technology 'WireGuard, UDP 51820'
+    description 'Carries AMQPS between WMS and Event Bus, metrics scraping and admin access.'
+  }
+
+  // ── Traffic entering the DMZ ──
+  customers -> prod.dc.dmz.proxy 'opens shop' {
+    technology 'HTTPS 443'
+  }
+}

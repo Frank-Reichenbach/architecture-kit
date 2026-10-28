@@ -1,0 +1,35 @@
+// Inside Monitoring.
+
+model {
+
+  extend monitoring {
+
+    prometheus = service 'Prometheus' {
+      description 'Scrapes and stores metrics, evaluates alert rules.'
+      technology 'Prometheus + Alertmanager'
+      icon tech:prometheus
+    }
+
+    grafana = webapp 'Grafana' {
+      description 'Dashboards for platform, shop and warehouse.'
+      technology 'Grafana'
+      icon tech:grafana
+    }
+  }
+
+  ops -> grafana 'watches dashboards' {
+    technology 'HTTPS'
+  }
+  prometheus -> ops 'pages on alerts' {
+    technology 'Alertmanager → phone'
+  }
+  grafana -> prometheus 'queries metrics' {
+    technology 'PromQL'
+  }
+  prometheus -> shop 'scrapes metrics' {
+    technology 'HTTP /metrics'
+  }
+  prometheus -> warehouse.wms 'scrapes metrics' {
+    technology 'HTTP /metrics over VPN'
+  }
+}

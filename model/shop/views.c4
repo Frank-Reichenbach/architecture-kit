@@ -1,0 +1,57 @@
+views {
+
+  view shopContext of shop {
+    title 'Online Shop — Context'
+    description 'Who uses the shop and which systems it depends on. Internals hidden.'
+    include
+      shop,
+      * -> shop,
+      shop -> *
+    style shop {
+      color primary
+    }
+  }
+
+  view shopContainers of shop {
+    title 'Online Shop — Containers'
+    description 'Deployable parts of the shop and how they talk to each other and to the outside.'
+    include *
+    autoLayout TopBottom
+  }
+
+  view shopEvents of shop {
+    title 'Online Shop — Event Flows'
+    description 'Only asynchronous messages over the event bus: who publishes and who consumes.'
+    include
+      shop.eventBus,
+      * -> shop.eventBus,
+      shop.eventBus -> *
+    exclude * -> * where kind is not async
+    autoLayout LeftRight
+  }
+
+  view personalData {
+    title 'Personal Data (GDPR)'
+    description 'Where personal data (names, addresses, orders) flows. Elements tagged #pii (red) own or store it.'
+    include
+      customer,
+      support,
+      picker,
+      shop.storefront,
+      shop.backoffice,
+      shop.identity,
+      shop.orders,
+      shop.ordersDb,
+      shop.notifier,
+      warehouse.scannerApp,
+      warehouse.wms,
+      warehouse.wmsDb,
+      emailService,
+      carrier
+    exclude * -> * where kind is async
+    style element.tag = #pii {
+      color red
+    }
+    autoLayout LeftRight
+  }
+}

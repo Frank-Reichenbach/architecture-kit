@@ -1,0 +1,207 @@
+// Vocabulary of the architecture model.
+// Every element, deployment node and relationship in this project must use one of these kinds,
+// so diagrams stay consistent and the model stays queryable (by kind, tag and metadata).
+
+specification {
+
+  // ───────────── Logical model: people and software (C4 style) ─────────────
+
+  element actor {
+    notation 'Person or role'
+    style {
+      shape person
+      color green
+    }
+  }
+
+  element system {
+    notation 'Software system we own'
+    style {
+      color primary
+    }
+  }
+
+  element external {
+    notation 'External system (not ours)'
+    style {
+      color gray
+    }
+  }
+
+  element webapp {
+    notation 'Web application / UI'
+    style {
+      shape browser
+    }
+  }
+
+  element mobileapp {
+    notation 'Mobile or handheld app'
+    style {
+      shape mobile
+    }
+  }
+
+  element service {
+    notation 'Backend service / API / worker'
+  }
+
+  element database {
+    notation 'Database'
+    style {
+      shape storage
+    }
+  }
+
+  element queue {
+    notation 'Message broker / queue / topic'
+    style {
+      shape queue
+    }
+  }
+
+  element bucket {
+    notation 'Object / file storage'
+    style {
+      shape bucket
+    }
+  }
+
+  element component {
+    notation 'Component inside a service'
+    style {
+      shape component
+    }
+  }
+
+  // ───────────── Deployment model: infrastructure and networks ─────────────
+
+  deploymentNode environment {
+    notation 'Environment'
+    style {
+      color muted
+    }
+  }
+
+  deploymentNode site {
+    notation 'Physical or cloud location'
+    style {
+      color muted
+      icon bootstrap:building
+    }
+  }
+
+  deploymentNode internet {
+    notation 'Public internet'
+    style {
+      color gray
+      icon bootstrap:globe2
+    }
+  }
+
+  // A network zone is one L2 segment / VLAN with one IP subnet.
+  // Required metadata: vlan, cidr, gateway.
+  deploymentNode network {
+    notation 'Network zone (VLAN / subnet)'
+    style {
+      color indigo
+      icon bootstrap:diagram-3
+    }
+  }
+
+  deploymentNode firewall {
+    notation 'Firewall / router'
+    style {
+      color red
+      icon bootstrap:shield-lock
+    }
+  }
+
+  deploymentNode switch {
+    notation 'Network switch'
+    style {
+      color secondary
+      icon bootstrap:hdd-network
+    }
+  }
+
+  deploymentNode accesspoint {
+    notation 'Wi-Fi access point'
+    style {
+      color secondary
+      icon bootstrap:wifi
+    }
+  }
+
+  deploymentNode server {
+    notation 'Physical server'
+    style {
+      icon bootstrap:hdd-rack
+    }
+  }
+
+  deploymentNode vm {
+    notation 'Virtual machine'
+    style {
+      icon bootstrap:window-stack
+    }
+  }
+
+  deploymentNode cluster {
+    notation 'Container cluster'
+    style {
+      icon tech:kubernetes
+    }
+  }
+
+  deploymentNode device {
+    notation 'End-user device(s)'
+    style {
+      color green
+      icon bootstrap:laptop
+    }
+  }
+
+  // ───────────── Relationships ─────────────
+  // Default (no kind): synchronous request/response call; arrow points from caller to callee.
+
+  // Asynchronous message or event; arrow points in the direction the data flows
+  // (publisher -> broker -> consumer).
+  relationship async {
+    notation 'Asynchronous message / event'
+    color amber
+    line dotted
+  }
+
+  // Physical or L2 network connection (cable, uplink, Wi-Fi association).
+  relationship netlink {
+    notation 'Network link'
+    color gray
+    line solid
+    head none
+  }
+
+  // Encrypted tunnel between sites or from clients.
+  relationship vpn {
+    notation 'VPN tunnel'
+    color red
+    line dashed
+    head normal
+    tail normal
+  }
+
+  // ───────────── Tags ─────────────
+
+  tag pii {
+    color #c2410c
+  }
+  tag critical {
+    color #b91c1c
+  }
+  tag planned {
+    color #2563eb
+  }
+  tag deprecated {
+    color #6b7280
+  }
+}

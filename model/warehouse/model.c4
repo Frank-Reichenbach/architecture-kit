@@ -1,0 +1,47 @@
+// Inside Warehouse Management: runs on-premises and talks to the shop over the site-to-site VPN.
+
+model {
+
+  extend warehouse {
+
+    wms = service 'WMS' {
+      description 'Warehouse management: stock per bin, pick lists, packing, shipment booking.'
+      technology 'Odoo'
+    }
+
+    wmsDb = database 'WMS DB' {
+      #pii
+      description 'Stock per storage bin, pick lists, shipments, shipping addresses.'
+      technology 'PostgreSQL'
+      icon tech:postgresql
+    }
+
+    scannerApp = mobileapp 'Scanner App' {
+      description 'Runs on handheld barcode scanners: pick, pack, stock count.'
+      technology 'Android'
+      icon tech:android
+    }
+  }
+
+  picker -> scannerApp 'scans items, confirms picks' {
+    technology 'touch + barcode'
+  }
+  scannerApp -> wms 'pick and pack transactions' {
+    technology 'REST/JSON'
+  }
+  wms -> wmsDb 'reads and writes' {
+    technology 'SQL'
+  }
+
+  // Integration with the shop (crosses the VPN)
+  shop.eventBus -[async]-> wms 'delivers OrderPaid' {
+    technology 'AMQPS'
+  }
+  wms -[async]-> shop.eventBus 'publishes OrderShipped, StockChanged' {
+    technology 'AMQPS'
+  }
+
+  wms -> carrier 'books shipments, prints labels' {
+    technology 'HTTPS'
+  }
+}

@@ -1,0 +1,76 @@
+// System landscape of "Trailhead Outdoor", a fictional mid-sized online retailer for outdoor gear.
+// People, external systems and the top-level systems we own.
+// The inside of each system lives in its own folder (shop/, warehouse/, ...).
+
+model {
+
+  // ───────────── People ─────────────
+
+  customer = actor 'Customer' {
+    description 'Buys outdoor gear in the online shop, tracks orders, returns items.'
+  }
+
+  support = actor 'Customer Service Agent' {
+    description 'Answers customer questions, handles cancellations, refunds and returns.'
+  }
+
+  picker = actor 'Warehouse Worker' {
+    description 'Picks, packs and ships orders in the warehouse.'
+  }
+
+  ops = actor 'Operations Engineer' {
+    description 'Runs the platform and the network, is on call for incidents.'
+  }
+
+  // ───────────── External systems ─────────────
+
+  paymentProvider = external 'Payment Provider' {
+    #critical
+    description 'Card and wallet payments, PCI-DSS certified (e.g. Stripe or Adyen).'
+    technology 'REST API + webhooks'
+  }
+
+  carrier = external 'Shipping Carrier' {
+    description 'Books shipments, creates shipping labels, provides tracking numbers.'
+    technology 'REST API'
+  }
+
+  emailService = external 'E-Mail Service' {
+    description 'Delivers transactional e-mails (order confirmation, shipping notice).'
+    technology 'SMTP relay'
+  }
+
+  // ───────────── Our systems ─────────────
+
+  shop = system 'Online Shop' {
+    #critical #pii
+    description 'Customer-facing web shop: catalog, cart, checkout, payments, order history.'
+    metadata {
+      owner 'Team Shop'
+    }
+  }
+
+  warehouse = system 'Warehouse Management' {
+    #pii
+    description 'Runs on-premises in the warehouse: stock levels, picking, packing, shipping.'
+    metadata {
+      owner 'Team Logistics'
+    }
+  }
+
+  monitoring = system 'Monitoring' {
+    description 'Collects metrics from all systems, shows dashboards, sends alerts to on-call.'
+    metadata {
+      owner 'Team Platform'
+    }
+  }
+}
+
+views {
+
+  view index {
+    title 'System Landscape'
+    description 'All people, our systems and the external systems they depend on.'
+    include *
+  }
+}
