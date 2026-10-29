@@ -1,0 +1,62 @@
+// Logical model: what runs in the cluster, independent of where.
+// IPs and names are placeholders (documentation ranges) — replace with real values.
+
+model {
+
+  user = actor 'Users' {
+    description 'Anyone calling the services hosted on the cluster from the internet.'
+  }
+
+  k8s = system 'Kubernetes Cluster' {
+    description 'Two-node cluster; both nodes run the control plane and workloads.'
+
+    apiServer = service 'Control Plane' {
+      description 'kube-apiserver, scheduler and controller-manager.'
+      technology 'Kubernetes'
+      icon tech:kubernetes
+    }
+
+    etcd = database 'etcd' {
+      description 'Cluster state. One member per control-plane node, replicated via Raft.'
+      technology 'etcd'
+    }
+
+    kubelet = service 'kubelet' {
+      description 'Node agent: registers the node, starts and watches pods.'
+      technology 'kubelet + containerd'
+    }
+
+    ingress = service 'Ingress Controller' {
+      description 'Listens on the node public IP (80/443) and routes requests to services.'
+      technology 'Ingress controller'
+      icon tech:nginx
+    }
+
+    workloads = service 'Workloads' {
+      description 'Application pods, scheduled on both nodes.'
+      technology 'Pods'
+      style {
+        multiple true
+      }
+    }
+  }
+
+  user -> ingress 'HTTPS requests' {
+    technology 'HTTPS 443'
+  }
+  ingress -> workloads 'routes to pods' {
+    technology 'HTTP over pod network'
+  }
+  apiServer -> etcd 'reads and writes cluster state' {
+    technology 'gRPC 2379'
+  }
+  kubelet -> apiServer 'registers node, watches pods' {
+    technology 'HTTPS 6443'
+  }
+  apiServer -> kubelet 'exec, logs, metrics' {
+    technology 'HTTPS 10250'
+  }
+  kubelet -> workloads 'starts and stops pods' {
+    technology 'CRI'
+  }
+}

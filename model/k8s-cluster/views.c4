@@ -1,0 +1,50 @@
+views {
+
+  view index {
+    title 'Overview'
+    description 'Who uses the cluster. Details in the network and component views.'
+    include *
+  }
+
+  deployment view network {
+    title 'Network — Servers, VMs and Kubernetes Nodes'
+    description 'Hardware and virtual NICs, the WireGuard tunnel, public ingress (grey, dashed) and cluster-internal traffic inside the tunnel (indigo, solid).'
+    include
+      wan,
+      wan.**,
+      server1.**,
+      server2.**
+    // node-local traffic between components is in clusterComponents
+    exclude * -> * where kind is not netlink and kind is not vpn and kind is not overlay
+    include
+      wan.clients -> server1.vm.node.ingress,
+      wan.clients -> server2.vm.node.ingress,
+      server1.vm.eth0 -> server1.vm.node.ingress,
+      server2.vm.eth0 -> server2.vm.node.ingress
+    exclude
+      server1.vm.node.kubelet,
+      server2.vm.node.kubelet,
+      server1.vm.node.apiServer,
+      server2.vm.node.apiServer
+    autoLayout LeftRight
+  }
+
+  view clusterComponents of k8s {
+    title 'Kubernetes — Components on Each Node'
+    description 'What runs on every node and how the components talk to each other locally.'
+    include *
+    autoLayout LeftRight
+  }
+
+  deployment view clusterTraffic {
+    title 'Cluster-internal Traffic'
+    description 'All Kubernetes components on both nodes; only traffic that crosses the WireGuard tunnel.'
+    include
+      server1.vm.node.**,
+      server2.vm.node.**,
+      server1.vm.wg0,
+      server2.vm.wg0
+    exclude * -> * where kind is not overlay and kind is not vpn
+    autoLayout LeftRight
+  }
+}

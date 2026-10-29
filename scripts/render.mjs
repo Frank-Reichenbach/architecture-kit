@@ -1,54 +1,100 @@
-// Renders every view to renders/<viewId>.jpg and writes renders/README.md as a review index.
+// Renders every view of every project into renders/<project>/ and writes renders/README.md as a review index.
 // Refuses to render a model that fails `likec4 validate` or scripts/check.mjs.
 //
-// Usage: node scripts/render.mjs [--filter <viewId pattern>]...
+// Renderers: deployment views (infrastructure, networks) → D2 with ELK layout → <viewId>.png, see scripts/d2.mjs.
+//            all other views (landscape, containers, sequences) → LikeC4 → <viewId>.jpg.
+//
+// Usage: node scripts/render.mjs [--project <name>] [--filter <viewId pattern>]...
 
 import { LikeC4 } from 'likec4'
 import { execFileSync } from 'node:child_process'
-import { readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { deploymentViewToD2 } from './d2.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const workspace = path.join(root, 'model')
 const outdir = path.join(root, 'renders')
 const likec4Bin = path.join(root, 'node_modules', '.bin', 'likec4')
+const cacheDir = path.join(root, '.cache')
 
 const filters = []
+let onlyProject
 for (let i = 2; i < process.argv.length; i++) {
-  if (process.argv[i] === '--filter' || process.argv[i] === '-f') filters.push(process.argv[++i])
+  const arg = process.argv[i]
+  if (arg === '--filter' || arg === '-f') filters.push(process.argv[++i])
+  else if (arg === '--project' || arg === '-p') onlyProject = process.argv[++i]
 }
+const partial = filters.length > 0 || onlyProject
 
 const run = (cmd, args) => execFileSync(cmd, args, { cwd: root, stdio: 'inherit' })
 
 try {
-  run(likec4Bin, ['validate', workspace])
+  run(likec4Bin, ['validate', '--no-layout', workspace])
   run(process.execPath, [path.join(root, 'scripts', 'check.mjs'), workspace])
 } catch {
   console.error('\nNot rendering: fix the errors above first.')
   process.exit(1)
 }
 
-// A full render replaces everything, so images of deleted or renamed views disappear.
-if (filters.length === 0) {
-  for (const file of readdirSync(outdir)) {
-    if (/\.(jpg|png)$/.test(file)) rmSync(path.join(outdir, file))
+const likec4 = await LikeC4.fromWorkspace(workspace, { logger: false })
+const projects = likec4.projects().filter(p => !onlyProject || p === onlyProject)
+if (projects.length === 0) {
+  console.error(`Unknown project '${onlyProject}'. Known: ${likec4.projects().join(', ')}`)
+  process.exit(1)
+}
+
+// A full render replaces everything, so images of deleted or renamed views and projects disappear.
+if (!partial) rmSync(outdir, { recursive: true, force: true })
+
+for (const project of projects) {
+  const projectDir = path.join(outdir, project)
+  mkdirSync(projectDir, { recursive: true })
+  // JPG, not PNG: LikeC4's PNGs have a transparent background that is unreadable in dark viewers.
+  // --sequence renders dynamic views as sequence diagrams.
+  // Export from the project's own folder: with several projects in one workspace, LikeC4 1.59
+  // only exports the first one correctly (wrong export URLs for the others).
+  run(likec4Bin, [
+    'export', 'jpg', path.join(workspace, project),
+    '--outdir', projectDir,
+    '--flat',
+    '--sequence',
+    ...filters.flatMap(f => ['--filter', f]),
+  ])
+}
+
+// ───────────── Deployment views through D2 ─────────────
+
+const hasD2 = (() => {
+  try {
+    execFileSync('d2', ['--version'], { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+})()
+// Same semantics as LikeC4's --filter: glob patterns on view ids, combined with OR
+const globToRegex = glob => new RegExp(`^${glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.')}$`)
+const matchesFilter = id => filters.length === 0 || filters.some(f => globToRegex(f).test(id))
+
+if (!hasD2) {
+  console.warn('\nwarn: d2 not found (brew install d2); deployment views keep the LikeC4 rendering.')
+} else {
+  for (const project of projects) {
+    const model = await likec4.computedModel(project)
+    for (const view of model.views()) {
+      if (!view.isDeploymentView() || !matchesFilter(view.id)) continue
+      const d2File = path.join(cacheDir, 'd2', project, `${view.id}.d2`)
+      mkdirSync(path.dirname(d2File), { recursive: true })
+      writeFileSync(d2File, await deploymentViewToD2(view, path.join(cacheDir, 'icons')))
+      execFileSync('d2', ['--layout', 'elk', '--pad', '40', d2File, path.join(outdir, project, `${view.id}.png`)], { stdio: 'ignore' })
+      rmSync(path.join(outdir, project, `${view.id}.jpg`), { force: true })
+      console.log(`d2: ${project}/${view.id}.png`)
+    }
   }
 }
 
-// JPG, not PNG: LikeC4's PNGs have a transparent background that is unreadable in dark viewers.
-// --sequence renders dynamic views as sequence diagrams.
-run(likec4Bin, [
-  'export', 'jpg', workspace,
-  '--outdir', outdir,
-  '--flat',
-  '--sequence',
-  ...filters.flatMap(f => ['--filter', f]),
-])
-
-// ───────────── Review index ─────────────
-
-const likec4 = await LikeC4.fromWorkspace(workspace, { logger: false })
-const model = await likec4.computedModel()
+// ───────────── Review index (always covers all projects) ─────────────
 
 const groups = [
   ['Landscape and cross-cutting views', v => v.isElementView() && !v.isScopedElementView()],
@@ -56,22 +102,29 @@ const groups = [
   ['Scenarios (sequence)', v => v.isDynamicView()],
   ['Infrastructure and network', v => v.isDeploymentView()],
 ]
+const sortKey = v => (v.id === 'index' ? '' : v.titleOrId)
 
 const lines = [
   '# Architecture diagrams',
   '',
-  '> Generated by `npm run render`; do not edit. Each image is rendered from the model in `model/`.',
+  '> Generated by `npm run render`; do not edit. Each image is rendered from the model in `model/<project>/`.',
   '',
 ]
-for (const [heading, match] of groups) {
-  const sortKey = v => (v.id === 'index' ? '' : v.titleOrId)
-  const views = [...model.views()].filter(match).sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
-  if (views.length === 0) continue
-  lines.push(`## ${heading}`, '')
-  for (const v of views) {
-    lines.push(`### ${v.titleOrId}`, '')
-    if (v.description && !v.description.isEmpty) lines.push(v.description.text, '')
-    lines.push(`View \`${v.id}\``, '', `![${v.titleOrId}](./${v.id}.jpg)`, '')
+for (const project of likec4.projects()) {
+  const model = await likec4.computedModel(project)
+  lines.push(`# ${model.project.title ?? project}`, '', `Project \`${project}\`, sources in \`model/${project}/\``, '')
+  for (const [heading, match] of groups) {
+    const views = [...model.views()]
+      .filter(match)
+      .sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
+    if (views.length === 0) continue
+    lines.push(`## ${heading}`, '')
+    for (const v of views) {
+      lines.push(`### ${v.titleOrId}`, '')
+      if (v.description && !v.description.isEmpty) lines.push(v.description.text, '')
+      const image = ['png', 'jpg'].map(ext => `${project}/${v.id}.${ext}`).find(f => existsSync(path.join(outdir, f)))
+      lines.push(`View \`${v.id}\``, '', image ? `![${v.titleOrId}](./${image})` : '_not rendered_', '')
+    }
   }
 }
 writeFileSync(path.join(outdir, 'README.md'), lines.join('\n'))

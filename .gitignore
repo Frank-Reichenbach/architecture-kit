@@ -31,3 +31,6 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# Generated D2 sources and icons (scripts/render.mjs)
+.cache/

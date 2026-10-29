@@ -1,0 +1,138 @@
+deployment {
+
+  wan = internet 'Internet' {
+    description 'Public internet and the providers network between the two servers.'
+
+    clients = device 'Clients' {
+      description 'Browsers and API clients.'
+      technology 'any'
+      style {
+        multiple true
+      }
+      instanceOf user
+    }
+  }
+
+  server1 = server 'Physical Server 1' {
+    description 'Bare-metal host running the hypervisor for VM 1.'
+    technology 'KVM hypervisor'
+
+    nic = nic 'Physical NIC' {
+      description 'Uplink of the host to the internet.'
+      technology '1 GbE'
+    }
+
+    vm = vm 'VM 1' {
+      description 'Linux VM, public IP on eth0, WireGuard on wg0.'
+      technology 'Linux'
+
+      eth0 = nic 'eth0 (public)' {
+        description 'Virtual NIC bridged to the physical NIC. Public ingress and encrypted WireGuard packets.'
+        technology 'virtio'
+        metadata {
+          ip '203.0.113.11/24'
+        }
+      }
+
+      wg0 = nic 'wg0 (WireGuard)' {
+        description 'Tunnel interface. Kubernetes node IP; all cluster-internal traffic.'
+        technology 'WireGuard'
+        metadata {
+          ip '10.10.0.1/24'
+          listen_port '51820'
+        }
+      }
+
+      node = k8snode 'k8s node-1' {
+        description 'Control plane + worker. node-ip = wg0 address, external-ip = eth0 address.'
+        instanceOf k8s.apiServer
+        instanceOf k8s.etcd
+        instanceOf k8s.kubelet
+        instanceOf k8s.ingress
+        instanceOf k8s.workloads
+      }
+    }
+  }
+
+  server2 = server 'Physical Server 2' {
+    description 'Bare-metal host running the hypervisor for VM 2.'
+    technology 'KVM hypervisor'
+
+    nic = nic 'Physical NIC' {
+      description 'Uplink of the host to the internet.'
+      technology '1 GbE'
+    }
+
+    vm = vm 'VM 2' {
+      description 'Linux VM, public IP on eth0, WireGuard on wg0.'
+      technology 'Linux'
+
+      eth0 = nic 'eth0 (public)' {
+        description 'Virtual NIC bridged to the physical NIC. Public ingress and encrypted WireGuard packets.'
+        technology 'virtio'
+        metadata {
+          ip '198.51.100.22/24'
+        }
+      }
+
+      wg0 = nic 'wg0 (WireGuard)' {
+        description 'Tunnel interface. Kubernetes node IP; all cluster-internal traffic.'
+        technology 'WireGuard'
+        metadata {
+          ip '10.10.0.2/24'
+          listen_port '51820'
+        }
+      }
+
+      node = k8snode 'k8s node-2' {
+        description 'Control plane + worker. node-ip = wg0 address, external-ip = eth0 address.'
+        instanceOf k8s.apiServer
+        instanceOf k8s.etcd
+        instanceOf k8s.kubelet
+        instanceOf k8s.ingress
+        instanceOf k8s.workloads
+      }
+    }
+  }
+
+  // ───────────── Underlay: physical and virtual links ─────────────
+
+  wan -[netlink]-> server1.nic 'public uplink'
+  wan -[netlink]-> server2.nic 'public uplink'
+  server1.nic -[netlink]-> server1.vm.eth0 'bridged (br0)'
+  server2.nic -[netlink]-> server2.vm.eth0 'bridged (br0)'
+
+  // eth0 carries the encrypted WireGuard packets of wg0
+  server1.vm.eth0 -[netlink]-> server1.vm.wg0 'carries encrypted UDP 51820'
+  server2.vm.eth0 -[netlink]-> server2.vm.wg0 'carries encrypted UDP 51820'
+
+  // Public ingress arrives on the public NIC
+  server1.vm.eth0 -> server1.vm.node.ingress 'forwards 80/443' {
+    technology 'hostPort / NodePort'
+  }
+  server2.vm.eth0 -> server2.vm.node.ingress 'forwards 80/443' {
+    technology 'hostPort / NodePort'
+  }
+
+  // ───────────── Tunnel ─────────────
+
+  server1.vm.wg0 -[vpn]-> server2.vm.wg0 'WireGuard tunnel 10.10.0.0/24' {
+    technology 'UDP 51820 between the public IPs'
+    description 'Point-to-point WireGuard peers; each peer endpoint is the other VM eth0 address.'
+  }
+
+  // ───────────── Cluster-internal traffic (inside the tunnel) ─────────────
+
+  server1.vm.node.etcd -[overlay]<-> server2.vm.node.etcd 'Raft peer replication' {
+    technology 'TCP 2380 via wg0'
+  }
+  server1.vm.node.workloads -[overlay]<-> server2.vm.node.workloads 'pod-to-pod, incl. ingress to pods on the other node' {
+    technology 'CNI overlay via wg0'
+  }
+  server1.vm.node.apiServer -[overlay]-> server2.vm.node.kubelet 'exec, logs, metrics' {
+    technology 'HTTPS 10250 via wg0'
+  }
+  server2.vm.node.apiServer -[overlay]-> server1.vm.node.kubelet 'exec, logs, metrics' {
+    technology 'HTTPS 10250 via wg0'
+  }
+}

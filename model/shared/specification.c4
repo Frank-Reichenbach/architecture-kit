@@ -154,6 +154,26 @@ specification {
     }
   }
 
+  // Kubernetes node: the kubelet + container runtime on one machine. Nest it inside its vm/server.
+  deploymentNode k8snode {
+    notation 'Kubernetes node'
+    style {
+      color indigo
+      icon tech:kubernetes
+    }
+  }
+
+  // Network interface, physical (on a server) or virtual (in a VM, e.g. eth0, wg0).
+  // Metadata: ip as address/prefix (e.g. '10.10.0.1/24'), optional mac, speed.
+  deploymentNode nic {
+    notation 'Network interface (physical or virtual)'
+    style {
+      color secondary
+      icon bootstrap:ethernet
+      size small
+    }
+  }
+
   deploymentNode device {
     notation 'End-user device(s)'
     style {
@@ -188,6 +208,14 @@ specification {
     line dashed
     head normal
     tail normal
+  }
+
+  // Traffic carried inside a tunnel or overlay network (e.g. over WireGuard, VXLAN).
+  // Draw it between the endpoints that talk; the tunnel itself is a separate -[vpn]-> relationship.
+  relationship overlay {
+    notation 'Traffic inside tunnel / overlay'
+    color indigo
+    line solid
   }
 
   // ───────────── Tags ─────────────

@@ -7,8 +7,8 @@
     "likec4": "1.59.4"
   },
   "scripts": {
-    "setup": "npm ci && playwright install --only-shell chromium",
-    "check": "likec4 validate model && node scripts/check.mjs",
+    "setup": "npm ci && playwright install --only-shell chromium && (command -v d2 >/dev/null || brew install d2)",
+    "check": "likec4 validate --no-layout model && node scripts/check.mjs",
     "render": "node scripts/render.mjs",
     "serve": "likec4 start model",
     "format": "likec4 format model",
