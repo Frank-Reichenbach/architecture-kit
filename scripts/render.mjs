@@ -10,7 +10,7 @@ import { LikeC4 } from 'likec4'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { deploymentViewToD2 } from './d2.mjs'
+import { renderDeploymentView } from './d2.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const workspace = path.join(root, 'model')
@@ -84,12 +84,12 @@ if (!hasD2) {
     const model = await likec4.computedModel(project)
     for (const view of model.views()) {
       if (!view.isDeploymentView() || !matchesFilter(view.id)) continue
-      const d2File = path.join(cacheDir, 'd2', project, `${view.id}.d2`)
-      mkdirSync(path.dirname(d2File), { recursive: true })
-      writeFileSync(d2File, await deploymentViewToD2(view, path.join(cacheDir, 'icons')))
-      execFileSync('d2', ['--layout', 'elk', '--pad', '40', d2File, path.join(outdir, project, `${view.id}.png`)], { stdio: 'ignore' })
+      const { layout, ratio } = await renderDeploymentView(view, path.join(outdir, project, `${view.id}.png`), {
+        workDir: path.join(cacheDir, 'd2', project),
+        iconDir: path.join(cacheDir, 'icons'),
+      })
       rmSync(path.join(outdir, project, `${view.id}.jpg`), { force: true })
-      console.log(`d2: ${project}/${view.id}.png`)
+      console.log(`d2: ${project}/${view.id}.png (${layout}, height:width ${ratio})`)
     }
   }
 }

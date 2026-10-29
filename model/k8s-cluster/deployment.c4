@@ -107,10 +107,10 @@ deployment {
   server2.vm.eth0 -[netlink]-> server2.vm.wg0 'carries encrypted UDP 51820'
 
   // Public ingress arrives on the public NIC
-  server1.vm.eth0 -> server1.vm.node.ingress 'forwards 80/443' {
+  server1.vm.eth0 -> server1.vm.node.ingress 'forwards client HTTPS (80/443)' {
     technology 'hostPort / NodePort'
   }
-  server2.vm.eth0 -> server2.vm.node.ingress 'forwards 80/443' {
+  server2.vm.eth0 -> server2.vm.node.ingress 'forwards client HTTPS (80/443)' {
     technology 'hostPort / NodePort'
   }
 

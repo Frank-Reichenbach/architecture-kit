@@ -38,7 +38,7 @@ View `clusterTraffic`
 
 ### Network — Servers, VMs and Kubernetes Nodes
 
-Hardware and virtual NICs, the WireGuard tunnel, public ingress (grey, dashed) and cluster-internal traffic inside the tunnel (indigo, solid).
+Hardware and virtual NICs, public ingress along internet → NIC → eth0 → ingress (grey), and cluster-internal traffic (indigo) entering the WireGuard tunnel (red) on each node.
 
 View `network`
 

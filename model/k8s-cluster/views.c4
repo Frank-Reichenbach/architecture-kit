@@ -8,7 +8,7 @@ views {
 
   deployment view network {
     title 'Network — Servers, VMs and Kubernetes Nodes'
-    description 'Hardware and virtual NICs, the WireGuard tunnel, public ingress (grey, dashed) and cluster-internal traffic inside the tunnel (indigo, solid).'
+    description 'Hardware and virtual NICs, public ingress along internet → NIC → eth0 → ingress (grey), and cluster-internal traffic (indigo) entering the WireGuard tunnel (red) on each node.'
     include
       wan,
       wan.**,
@@ -16,9 +16,8 @@ views {
       server2.**
     // node-local traffic between components is in clusterComponents
     exclude * -> * where kind is not netlink and kind is not vpn and kind is not overlay
+    // public traffic is shown along its path: internet → NIC → eth0 → ingress
     include
-      wan.clients -> server1.vm.node.ingress,
-      wan.clients -> server2.vm.node.ingress,
       server1.vm.eth0 -> server1.vm.node.ingress,
       server2.vm.eth0 -> server2.vm.node.ingress
     exclude
@@ -26,7 +25,7 @@ views {
       server2.vm.node.kubelet,
       server1.vm.node.apiServer,
       server2.vm.node.apiServer
-    autoLayout LeftRight
+    autoLayout TopBottom
   }
 
   view clusterComponents of k8s {
