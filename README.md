@@ -5,6 +5,7 @@ Architecture as code. Claude writes and maintains a semantic architecture **mode
 
 - **Review here:** [`renders/README.md`](renders/README.md): every diagram of every project, with title and description.
 - **Model:** `model/<project>/**/*.c4` ([LikeC4](https://likec4.dev) DSL): elements, relationships, deployment and network.
+- **Notes:** [`docs/notes/aspect-ratio.md`](docs/notes/aspect-ratio.md): why diagrams aim for about 2:3 / 3:2 (golden ratio).
 - **Background:** [`docs/chats/open-source-architektursoftware.md`](docs/chats/open-source-architektursoftware.md)
   is the research chat that led to this setup.
 

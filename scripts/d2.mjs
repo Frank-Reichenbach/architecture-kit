@@ -101,8 +101,9 @@ function nodeLabel(node, isContainer) {
 // 2. Through the tunnel: D2 draws edges between grid cells as straight lines, so cross-host edges must be
 //    rare. Overlay traffic between two hosts joined by a vpn tunnel is drawn from each endpoint to its local
 //    tunnel interface; the tunnel edge lists what it carries. That is also how the traffic physically flows.
-// 3. Aspect ratio: renderDeploymentView() renders alternatives and keeps the one closest to 2:3 (height:width):
-//    with twins, side by side vs. stacked (ELK ignores `direction` inside grid cells); otherwise both directions.
+// 3. Aspect ratio: renderDeploymentView() renders alternatives and keeps the one closest to a pleasant ratio,
+//    5:8 to 2:3 in either orientation (see docs/notes/aspect-ratio.md): with twins, side by side vs. stacked
+//    (ELK ignores `direction` inside grid cells); otherwise both flow directions.
 
 const signature = node => `${node.kind}(${[...node.children()].map(signature).sort().join(',')})`
 
@@ -256,22 +257,36 @@ export async function deploymentViewToD2(view, iconDir, { direction, twinsArrang
   return out.join('\n') + '\n'
 }
 
+// height:width targets, both orientations: 5:8, 2:3, 3:2, 8:5
+const RATIO_TARGETS = [5 / 8, 2 / 3, 3 / 2, 8 / 5]
+const ratioScore = ratio => Math.min(...RATIO_TARGETS.map(t => Math.abs(Math.log(ratio / t))))
+
 const pngSize = file => {
   const header = readFileSync(file).subarray(16, 24)
   return { width: header.readUInt32BE(0), height: header.readUInt32BE(4) }
 }
 
 /**
- * Rule 3: renders layout alternatives and keeps the image whose height:width is closest to 2:3.
+ * Rule 3: renders layout alternatives and keeps the image closest to one of RATIO_TARGETS.
  * The D2 sources and candidate images stay in workDir for inspection.
  * @returns {{ layout: string, ratio: number }}
  */
 export async function renderDeploymentView(view, outPng, { workDir, iconDir }) {
   const own = DIRECTIONS[view.$view.autoLayout?.direction] ?? 'down'
   const other = { down: 'right', up: 'left', right: 'down', left: 'up' }[own]
-  const options = findTwins([...view.roots()]).length > 0
-    ? [{ twinsArrangement: 'columns' }, { twinsArrangement: 'rows' }]
-    : [{ direction: own }, { direction: other }]
+  // Twins linked to each other (e.g. by a tunnel) stay side by side: stacked, the straight link would run
+  // through the lower twin's content. Readability beats ratio.
+  const twins = findTwins([...view.roots()])
+  const twinOf = new Map()
+  const subtree = n => [n, ...[...n.children()].flatMap(subtree)]
+  for (const t of twins) for (const n of subtree(t)) twinOf.set(n.id, t.id)
+  const linked = [...view.edges()].some(e => {
+    const [a, b] = [twinOf.get(e.$edge.source), twinOf.get(e.$edge.target)]
+    return a && b && a !== b
+  })
+  const options = twins.length === 0
+    ? [{ direction: own }, { direction: other }]
+    : linked ? [{ twinsArrangement: 'columns' }] : [{ twinsArrangement: 'columns' }, { twinsArrangement: 'rows' }]
   mkdirSync(workDir, { recursive: true })
   const candidates = []
   for (const option of options) {
@@ -283,7 +298,7 @@ export async function renderDeploymentView(view, outPng, { workDir, iconDir }) {
     execFileSync('d2', ['--layout', 'elk', '--pad', '40', d2File, png], { stdio: 'ignore' })
     const { width, height } = pngSize(png)
     const ratio = height / width
-    candidates.push({ layout, ratio, png, score: Math.abs(Math.log(ratio / (2 / 3))) })
+    candidates.push({ layout, ratio, png, score: ratioScore(ratio) })
   }
   const best = candidates.reduce((a, b) => (b.score < a.score ? b : a))
   copyFileSync(best.png, outPng)
