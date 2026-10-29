@@ -122,11 +122,11 @@ describe('d2 layout rules', async () => {
 })
 
 describe('init', () => {
-  test('scaffolds architecture/ with the kit pinned to this version', () => {
+  test('scaffolds .architecture-kit/ with the kit pinned to this version', () => {
     const repo = path.join(tmp, 'my-repo')
     const out = quiet()
     const ws = init(repo, { name: 'my-repo', title: 'My Repo', install: false, log: out.log })
-    assert.equal(ws, path.join(repo, 'architecture'))
+    assert.equal(ws, path.join(repo, '.architecture-kit'))
     const pkg = JSON.parse(readFileSync(path.join(ws, 'package.json'), 'utf8'))
     assert.equal(pkg.devDependencies['architecture-kit'], `github:Frank-Reichenbach/architecture-kit#v${KIT_VERSION}`)
     assert.equal(DEFAULT_KIT_SOURCE, pkg.devDependencies['architecture-kit'])
@@ -147,6 +147,37 @@ const canRender = hasD2() && (() => {
     return false
   }
 })()
+
+describe('plugin', () => {
+  const skills = ['architecture', 'init', 'review']
+
+  test('skills only run when the user calls them', () => {
+    for (const skill of skills) {
+      const text = readFileSync(path.join(root, 'skills', skill, 'SKILL.md'), 'utf8')
+      const frontmatter = text.split('---')[1]
+      assert.match(frontmatter, /^disable-model-invocation: true$/m, `${skill} must not be model-invoked`)
+    }
+  })
+
+  test('skills point to the shared guide, which ends with the final message', () => {
+    for (const skill of skills) {
+      const text = readFileSync(path.join(root, 'skills', skill, 'SKILL.md'), 'utf8')
+      assert.ok(text.includes('${CLAUDE_PLUGIN_ROOT}/guide/modelling.md'), `${skill} must read the guide`)
+      assert.match(text, /final message/i, `${skill} must end with the final message`)
+    }
+    const guide = readFileSync(path.join(root, 'guide', 'modelling.md'), 'utf8')
+    assert.match(guide, /## Final message to the user \(mandatory\)/)
+  })
+
+  test('manifests agree on name and version', () => {
+    const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'))
+    const plugin = JSON.parse(readFileSync(path.join(root, '.claude-plugin', 'plugin.json'), 'utf8'))
+    const marketplace = JSON.parse(readFileSync(path.join(root, '.claude-plugin', 'marketplace.json'), 'utf8'))
+    assert.equal(plugin.name, pkg.name)
+    assert.equal(plugin.version, pkg.version)
+    assert.deepEqual(marketplace.plugins.map(p => p.name), [plugin.name])
+  })
+})
 
 describe('render', { skip: !canRender && 'needs d2 and the headless browser' }, () => {
   test('renders every view and writes the review index', async () => {

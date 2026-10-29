@@ -13,7 +13,7 @@ const workspace = findWorkspace(projectDir)
 const likec4 = workspace && path.join(workspace, 'node_modules', 'likec4', 'bin', 'likec4.mjs')
 
 if (!workspace) {
-  console.error('architecture-kit: no architecture/ workspace in this repository. Run `architecture-kit init` to create one.')
+  console.error('architecture-kit: no .architecture-kit/ workspace in this repository. Run /architecture-kit:init to create one.')
   process.exit(1)
 }
 if (!existsSync(likec4)) {

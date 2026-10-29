@@ -4,7 +4,7 @@
 
 ## Kubernetes cluster over WireGuard (example)
 
-Project `k8s-cluster`, sources in `./`
+Project `k8s-cluster`
 
 ### Landscape and cross-cutting views
 

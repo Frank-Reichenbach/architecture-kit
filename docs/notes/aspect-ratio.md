@@ -29,8 +29,7 @@ starts to feel awkward and is harder to read on a screen.
   preferences were strong and stable, but very different from person to person.
 
 **Takeaway:** people tend to like moderately elongated rectangles. There's no special pull to exactly 1.618,
-and 2:3, 3:2, 5:8 and φ are all equally good targets. That matches the owner's guidance: good to know, not
-always achievable.
+and 2:3, 3:2, 5:8 and φ are all equally good targets: good to know, but not always achievable.
 
 ## How `architecture-kit render` applies it
 

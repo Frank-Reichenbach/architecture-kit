@@ -1,6 +1,6 @@
 {
   "name": "architecture-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Architecture as code for Claude Code: LikeC4 models with semantic lint, rendered (LikeC4 + D2) for human review",
   "type": "module",
   "bin": {
