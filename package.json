@@ -1,17 +1,36 @@
 {
-  "name": "architecture",
-  "private": true,
-  "description": "Architecture as code: LikeC4 models that Claude writes and you review as rendered images",
+  "name": "architecture-kit",
+  "version": "0.1.0",
+  "description": "Architecture as code for Claude Code: LikeC4 models with semantic lint, rendered (LikeC4 + D2) for human review",
   "type": "module",
-  "devDependencies": {
-    "likec4": "1.59.4"
+  "bin": {
+    "architecture-kit": "bin/architecture-kit"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "spec"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
-    "setup": "npm ci && playwright install --only-shell chromium && (command -v d2 >/dev/null || brew install d2)",
-    "check": "likec4 validate --no-layout model && node scripts/check.mjs",
-    "render": "node scripts/render.mjs",
-    "serve": "likec4 start model",
-    "format": "likec4 format model",
-    "mcp": "likec4 mcp --stdio model"
+    "test": "node --test test/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Frank-Reichenbach/architecture-kit.git"
+  },
+  "keywords": [
+    "architecture",
+    "likec4",
+    "d2",
+    "diagrams",
+    "claude-code"
+  ],
+  "dependencies": {
+    "likec4": "1.59.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   }
 }

@@ -32,9 +32,9 @@ starts to feel awkward and is harder to read on a screen.
 and 2:3, 3:2, 5:8 and φ are all equally good targets. That matches the owner's guidance: good to know, not
 always achievable.
 
-## How `npm run render` applies it
+## How `architecture-kit render` applies it
 
-`scripts/d2.mjs` renders each deployment/network view in two layouts (twins side by side vs. stacked, or both
+`lib/d2.mjs` renders each deployment/network view in two layouts (twins side by side vs. stacked, or both
 flow directions) and keeps the one whose ratio is closest to *any* of 5:8, 2:3, 3:2, 8:5. The render log prints
 the chosen layout and its height:width. If neither layout comes close, the closer one still wins; the rule never
 blocks a render, and it never overrides layout rules that keep a diagram correct and readable (identical twins,

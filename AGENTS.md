@@ -1,13 +1,23 @@
-# Architecture as code (agent instructions)
+# architecture-kit (agent instructions for developing the kit)
 
-This repo holds architecture **models** (LikeC4 DSL, one project per folder in `model/`, with a shared
-specification in `model/shared/`) from which all diagrams are rendered. The owner reviews only the rendered
-images in `renders/<project>/`; Claude writes and queries the models.
+This repo is both a Claude Code plugin marketplace/plugin and the npm package that target repositories install
+into `architecture/node_modules`. Read `README.md` for the user-facing picture.
 
-- Before touching `model/`, use the `architecture-diagrams` skill. It has the conventions, DSL gotchas and recipes.
-- Query relationships and context through the `likec4` MCP server rather than guessing from pictures.
-- Loop: edit `.c4` → `npm run check` → `npm run render` → Read the changed `renders/<project>/*` → fix → commit model and renders together.
-- Rendering: deployment/network views go through D2 (`scripts/d2.mjs`, `.png`); everything else through LikeC4 (`.jpg`).
-- Never edit `renders/` by hand. Never add a diagram that isn't backed by model elements and relationships.
-- `model/trailhead/` is a fictional example; real architectures get their own project.
-- `docs/chats/` has the original research chat behind the choice of tools.
+| Path | What |
+|---|---|
+| `.claude-plugin/` | `plugin.json` (plugin manifest, MCP server) and `marketplace.json` (plugin source `./`) |
+| `skills/` | Plugin skills: `architecture` (main), `init`, `review`. They are the agent's instructions in target repos |
+| `hooks/hooks.json`, `plugin-scripts/` | Lint hook after `.c4` edits; MCP launcher. Dependency-free, they delegate to the kit installed in the target workspace |
+| `bin/architecture-kit` | CLI launcher (npm bin and plugin `bin/` on PATH). `init` and `help` run without dependencies |
+| `lib/` | `cli`, `init` (dependency-free), `workspace`, `check` (lint), `render`, `d2` (generator + layout rules) |
+| `spec/specification.c4` | Shared LikeC4 specification, included by every target workspace |
+| `examples/k8s-cluster/` | Reference model + renders; also the test fixture |
+| `test/` | `npm test` (node:test) |
+
+Rules:
+- Keep `bin/`, `lib/init.mjs`, `lib/workspace.mjs` and `plugin-scripts/` free of npm dependencies.
+- Behaviour changes to the lint or renderer need a test in `test/` and a re-render of the example
+  (`node bin/architecture-kit render --dir examples/k8s-cluster`); look at the images.
+- Keep `skills/architecture/SKILL.md` in sync with the specification, the lint rules and the layout rules.
+- Versions: `package.json` and `.claude-plugin/plugin.json` carry the same version; releases are tags `v<version>`.
+- `claude plugin validate .` must pass.

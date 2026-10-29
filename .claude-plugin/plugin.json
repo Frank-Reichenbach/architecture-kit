@@ -1,0 +1,21 @@
+{
+  "name": "architecture-kit",
+  "displayName": "Architecture Kit",
+  "version": "0.1.0",
+  "description": "Architecture as code: Claude models software, infrastructure and networks in LikeC4, checks the model, and renders diagrams (LikeC4 + D2) for human review",
+  "author": {
+    "name": "Frank Reichenbach"
+  },
+  "homepage": "https://github.com/Frank-Reichenbach/architecture-kit",
+  "repository": "https://github.com/Frank-Reichenbach/architecture-kit",
+  "keywords": ["architecture", "diagrams", "likec4", "d2", "network"],
+  "mcpServers": {
+    "likec4": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/plugin-scripts/mcp.mjs"],
+      "env": {
+        "ARCHITECTURE_KIT_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}"
+      }
+    }
+  }
+}

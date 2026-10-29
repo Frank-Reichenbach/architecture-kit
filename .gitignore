@@ -32,5 +32,8 @@ __pycache__/
 .venv/
 venv/
 
-# Generated D2 sources and icons (scripts/render.mjs)
+# Generated D2 sources and icons (lib/render.mjs)
 .cache/
+
+# The kit's CLI lives in bin/ (overrides global ignore rules for bin/)
+!bin/

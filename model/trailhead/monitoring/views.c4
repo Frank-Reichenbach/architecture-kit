@@ -1,9 +1,0 @@
-views {
-
-  view monitoringContainers of monitoring {
-    title 'Monitoring — Containers'
-    description 'What is monitored and how alerts reach the on-call engineer.'
-    include *
-    autoLayout LeftRight
-  }
-}

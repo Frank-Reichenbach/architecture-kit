@@ -1,0 +1,14 @@
+{
+  "name": "architecture-kit",
+  "description": "Architecture as code for Claude Code",
+  "owner": {
+    "name": "Frank Reichenbach"
+  },
+  "plugins": [
+    {
+      "name": "architecture-kit",
+      "source": "./",
+      "description": "Model software, infrastructure and networks in LikeC4; Claude keeps the model consistent and renders reviewable diagrams"
+    }
+  ]
+}

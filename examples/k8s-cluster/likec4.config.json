@@ -1,0 +1,9 @@
+{
+  "$schema": "../../node_modules/likec4/config/schema.json",
+  "name": "k8s-cluster",
+  "title": "Kubernetes cluster over WireGuard (example)",
+  "include": {
+    "paths": ["../../spec"]
+  },
+  "exclude": ["renders/**", ".cache/**"]
+}

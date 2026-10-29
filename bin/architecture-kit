@@ -1,0 +1,46 @@
+#!/usr/bin/env node
+// Launcher for architecture-kit. It runs in two places:
+// - as the npm bin of the kit installed in a target repo's architecture/node_modules (dependencies resolvable)
+// - from the Claude Code plugin's bin/ directory on PATH (no dependencies next to it). Then it hands over to
+//   the kit installed in the workspace, so the version pinned by the target repo always wins.
+// `init` and `help` need no dependencies and run anywhere.
+
+import { spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import path from 'node:path'
+
+const argv = process.argv.slice(2)
+const command = argv[0]
+
+const resolvable = (() => {
+  try {
+    createRequire(import.meta.url).resolve('likec4/package.json')
+    return true
+  } catch {
+    return false
+  }
+})()
+
+if (resolvable) {
+  const { main } = await import('../lib/cli.mjs')
+  process.exitCode = await main(argv)
+} else if (command === 'init') {
+  const { init } = await import('../lib/init.mjs')
+  const opt = name => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : undefined)
+  init(process.cwd(), { name: opt('--name'), title: opt('--title'), kitSource: opt('--kit'), install: !argv.includes('--no-install') })
+} else {
+  const { findWorkspace } = await import('../lib/workspace.mjs')
+  const dirIndex = argv.indexOf('--dir')
+  const workspace = dirIndex >= 0 ? path.resolve(argv[dirIndex + 1]) : findWorkspace()
+  const installed = workspace && path.join(workspace, 'node_modules', 'architecture-kit', 'bin', 'architecture-kit')
+  if (!installed || !existsSync(installed)) {
+    console.error(workspace
+      ? `architecture-kit is not installed in ${workspace}. Run: (cd ${path.relative(process.cwd(), workspace) || '.'} && npm install)`
+      : 'No architecture workspace found. Run `architecture-kit init` in the repository root first.')
+    process.exitCode = 1
+  } else {
+    const result = spawnSync(process.execPath, [installed, ...argv], { stdio: 'inherit' })
+    process.exitCode = result.status ?? 1
+  }
+}
